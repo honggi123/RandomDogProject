@@ -3,12 +3,15 @@ package com.example.randomdogproject.ui.profile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.randomdogproject.data.DogRepository
+import com.example.randomdogproject.data.model.ApiResponse
 import com.example.randomdogproject.data.model.DogProfile
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -20,21 +23,26 @@ class DogProfileViewModel @Inject constructor(
     private val repository: DogRepository
 ) : ViewModel() {
 
-    private val dogProfileStream = MutableStateFlow<DogProfile?>(null)
+    private val _uiState = MutableStateFlow<DogProfileUiState>(DogProfileUiState.Loading)
+    val uiState: StateFlow<DogProfileUiState> = _uiState
 
-    val uiState: StateFlow<DogProfileUiState> =
-        dogProfileStream
-            .filterNotNull()
-            .map { DogProfileUiState.Profile(it.profileUrl) }
-            .stateIn(
-                viewModelScope,
-                SharingStarted.WhileSubscribed(3_000),
-                DogProfileUiState.Loading
-            )
-
-    fun refreshProfile() {
+    fun onRefreshClick() {
         viewModelScope.launch {
-            dogProfileStream.value = repository.getRandomDogPhotoUrl()
+            repository.getRandomProfile().collectLatest { result ->
+                _uiState.value = when (result) {
+                    is ApiResponse.ApiSuccess -> {
+                        DogProfileUiState.Profile(result.value)
+                    }
+
+                    is ApiResponse.ApiError -> {
+                        DogProfileUiState.LoadFailed
+                    }
+
+                    is ApiResponse.ApiException -> {
+                        TODO()
+                    }
+                }
+            }
         }
     }
 }
@@ -46,7 +54,7 @@ sealed interface DogProfileUiState {
     data object LoadFailed : DogProfileUiState
 
     data class Profile(
-        val photoUrl: String,
+        val profile: DogProfile,
     ) : DogProfileUiState
 
     data object Empty : DogProfileUiState

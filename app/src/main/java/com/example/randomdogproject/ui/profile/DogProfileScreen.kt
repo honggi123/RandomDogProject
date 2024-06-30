@@ -23,8 +23,8 @@ fun DogProfileScreen(
     when (val state = uiState.value) {
         is DogProfileUiState.Profile -> {
             ProfileContent(
-                url = state.photoUrl,
-                onRefreshButtonClick = viewModel::refreshProfile,
+                url = state.profile.profileUrl,
+                onRefreshButtonClick = viewModel::onRefreshClick,
                 modifier = Modifier.fillMaxSize()
             )
         }

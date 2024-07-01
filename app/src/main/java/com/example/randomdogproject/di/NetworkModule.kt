@@ -1,6 +1,6 @@
 package com.example.randomdogproject.di
 
-import com.hong7.coinnews.network.okhttp.retrofit.NaverService
+import com.example.randomdogproject.data.DogService
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import dagger.Module
 import dagger.Provides
@@ -32,7 +32,7 @@ object NetworkModule {
 
     @Singleton
     @Provides
-    fun provideDogService(client: OkHttpClient): NaverService {
+    fun provideDogService(client: OkHttpClient): DogService {
         val json = Json { ignoreUnknownKeys = true }
         val contentType = "application/json".toMediaType()
 
@@ -41,6 +41,6 @@ object NetworkModule {
             .client(client)
             .addConverterFactory(json.asConverterFactory(contentType))
             .build()
-            .create(NaverService::class.java)
+            .create(DogService::class.java)
     }
 }

@@ -34,12 +34,8 @@ class DogProfileViewModel @Inject constructor(
                         DogProfileUiState.Profile(result.value)
                     }
 
-                    is ApiResponse.ApiError -> {
+                    is ApiResponse.ApiError, is ApiResponse.ApiException -> {
                         DogProfileUiState.LoadFailed
-                    }
-
-                    is ApiResponse.ApiException -> {
-                        TODO()
                     }
                 }
             }
@@ -56,6 +52,4 @@ sealed interface DogProfileUiState {
     data class Profile(
         val profile: DogProfile,
     ) : DogProfileUiState
-
-    data object Empty : DogProfileUiState
 }

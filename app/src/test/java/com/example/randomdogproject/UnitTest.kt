@@ -11,7 +11,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.Rule
 import org.junit.Test
@@ -39,14 +41,19 @@ class CoroutineRule(
 }
 
 class FakeDogProfileRepository(
-    val shouldReturnNetworkError: Boolean = false
+    val shouldReturnException: Boolean = false,
+    val shouldReturnError: Boolean = false
 ) : DogRepository {
 
     override fun getRandomProfile(): Flow<ApiResponse<DogProfile>> = flow {
-        val response = if (shouldReturnNetworkError) {
-            ApiResponse.ApiException(RuntimeException())
+        val response = if (!shouldReturnException) {
+            if (shouldReturnError) {
+                ApiResponse.ApiSuccess(DogProfile("https://example.com"))
+            } else {
+                ApiResponse.ApiError(999, "")
+            }
         } else {
-            ApiResponse.ApiSuccess(DogProfile("https://example.com"))
+            ApiResponse.ApiException(RuntimeException())
         }
         emit(response)
     }
@@ -58,7 +65,7 @@ class UnitTest {
     val coroutineRule = CoroutineRule()
 
     @Test
-    fun `뷰모델을 생성하면 ui상태는 로딩중이 반환됨`() {
+    fun `뷰모델을_생성하면_ui상태는_로딩중이_반환됨`() {
         // Given
         val viewModel = DogProfileViewModel(
             FakeDogProfileRepository()
@@ -66,5 +73,33 @@ class UnitTest {
 
         // Then
         assert(viewModel.uiState.value is DogProfileUiState.Loading)
+    }
+
+    @Test
+    fun `새로고침_API가_정상적으로_반환된다면_uiState는_LoadFailed_가진다`() = runTest {
+        // Given
+        val viewModel = DogProfileViewModel(
+            FakeDogProfileRepository()
+        )
+
+        viewModel.onRefreshClick()
+        advanceUntilIdle()
+
+        // Then
+        assert(viewModel.uiState.value is DogProfileUiState.Profile)
+    }
+
+    @Test
+    fun `API_호출할때_Exception이_발생했을_때_uiState는_LoadFailed를_가진다`() = runTest {
+        // Given
+        val viewModel = DogProfileViewModel(
+            FakeDogProfileRepository(true)
+        )
+
+        viewModel.onRefreshClick()
+        advanceUntilIdle()
+
+        // Then
+        assert(viewModel.uiState.value is DogProfileUiState.LoadFailed)
     }
 }
